@@ -1,138 +1,170 @@
-# Design Guidelines: AdventureSync - Outdoor Adventurer Meeting Scheduler
+# Design Guidelines: Finance AI Platform
 
 ## Design Approach
 
-**Selected Approach**: Reference-Based with Adventure Theme
-- Primary inspiration: Airbnb (trust and community), Notion (clean scheduling interface), AllTrails (outdoor aesthetic)
-- Purpose: Experience-focused app combining utility with adventure brand identity
-- Key principle: Make timezone scheduling feel like planning an outdoor expedition
+**Selected Approach**: Reference-Based (Financial Technology Leaders)
+- Primary inspiration: Stripe (trust/clarity), Plaid (data visualization), Mercury (modern banking), Robinhood (accessible finance)
+- Purpose: Utility-focused platform balancing data density with visual clarity
+- Key principle: Make complex financial data feel approachable and secure
 
 ## Typography
 
 **Font Families** (via Google Fonts):
-- Primary: 'Inter' - Clean, professional for UI elements and body text
-- Accent: 'Montserrat' - Bold, adventurous for headers and CTAs
-- Monospace: 'JetBrains Mono' - For timezone/time displays
+- Primary: 'Inter' - Professional, highly legible for data-heavy interfaces
+- Display: 'DM Sans' - Clean, modern for headers and key metrics
+- Monospace: 'Roboto Mono' - For currency amounts, account numbers, transaction IDs
 
 **Hierarchy**:
-- Hero Headlines: Montserrat Bold, 4xl-6xl
-- Section Headers: Montserrat SemiBold, 2xl-3xl  
-- Body Text: Inter Regular, base-lg
-- UI Labels: Inter Medium, sm
-- Time Displays: JetBrains Mono Medium, lg
+- Dashboard Headers: DM Sans Bold, 3xl-4xl
+- Section Titles: DM Sans SemiBold, xl-2xl
+- Card Headers: DM Sans Medium, lg
+- Body Text: Inter Regular, sm-base
+- Data Labels: Inter Medium, xs-sm
+- Financial Figures: Roboto Mono SemiBold, lg-2xl (large amounts), base (inline amounts)
 
 ## Layout System
 
-**Spacing Units**: Tailwind units of 2, 4, 6, and 8 as primary rhythm
-- Tight spacing: p-2, gap-2 (within components)
-- Standard spacing: p-4, m-4, gap-4 (cards, form fields)
-- Section spacing: p-6, py-8 (between major sections)
-- Page margins: px-8, py-12 (outer containers)
+**Spacing Units**: Tailwind units of 2, 4, 6, and 8
+- Component padding: p-4, p-6 (cards, panels)
+- Section spacing: py-8, py-12 (dashboard sections)
+- Data density: gap-2, gap-4 (tight spacing for financial tables)
+- Page containers: px-6, py-8
 
 **Grid System**:
 - Container: max-w-7xl mx-auto
-- Dashboard: 3-column grid (lg:grid-cols-3) for upcoming meetings
-- Meeting details: 2-column split (form/participants + timezone map)
-- Mobile: Single column stack
+- Dashboard: 4-column responsive grid (grid-cols-1 md:grid-cols-2 lg:grid-cols-4)
+- Analytics: 3-column layout (2-col main content + 1-col sidebar)
+- Transaction lists: Full-width with alternating row treatment
 
 ## Component Library
 
 **Navigation**:
-- Top bar with logo, main nav links, user profile dropdown
-- Sticky positioning on scroll
-- Mountain peak icon as logo element
+- Persistent sidebar (w-64) with collapsible sections: Dashboard, Transactions, Analytics, Budgets, Settings
+- Top bar with search, notifications, security indicators, user profile
+- Breadcrumb navigation for deep sections
 
 **Dashboard Cards**:
-- Meeting cards with elevated shadow (shadow-lg)
-- Rounded corners (rounded-xl)
-- Icon badges for meeting type (hike, climb, camp)
-- Time displayed in user's timezone with conversion indicator
+- Metric cards (shadow-sm, rounded-lg) displaying key financial health scores
+- Large numerical displays with trend indicators (arrows, percentages)
+- Sparkline charts showing 7-day/30-day trends
+- Fraud alerts with warning badges
 
-**Meeting Creator**:
-- Multi-step form wizard with progress indicator
-- Participant selector with timezone chips
-- Visual timezone converter showing all participant times simultaneously
-- Map component displaying participant locations with markers
+**Data Visualization**:
+- Primary charts: Line charts (spending over time), bar charts (category breakdown), donut charts (budget allocation)
+- Transaction heatmap showing spending patterns by day/time
+- Financial health score with radial progress indicator
+- Use Chart.js library via CDN
 
-**Timezone Display**:
-- Horizontal timeline showing 24-hour cycle
-- Highlighted overlap zones for optimal meeting times
-- Participant avatars positioned at their local times
+**Transaction List**:
+- Infinite scroll table with sticky headers
+- Row structure: Icon (category) | Description | Date | Amount | Status badge
+- Expandable rows revealing transaction details, merchant info, categorization controls
+- Bulk selection with checkboxes for batch actions
+- Real-time fraud detection flags with inline alerts
 
-**Notification Panel**:
-- Slide-out panel from right side
-- Reminder list with countdown timers
-- Adventure-themed icons (compass for upcoming, flag for completed)
+**Budget Manager**:
+- Category cards with progress bars showing spent/remaining
+- Visual overflow indicators when budget exceeded
+- Drag-and-drop to adjust allocations
+- Comparison view: planned vs actual spending
 
-**Calendar View**:
-- Month grid with meeting dots
-- Color-coded by meeting type
-- Click to expand day details
+**Security Dashboard**:
+- Security score widget with breakdown of contributing factors
+- Recent login activity timeline
+- Connected accounts list with last sync status
+- Two-factor authentication status panel
+
+**Analytics Panels**:
+- Monthly spending trend graphs
+- Category comparison (current vs previous period)
+- Predictive spending forecasts with confidence intervals
+- Cash flow visualization (income vs expenses waterfall chart)
+
+**Empty States**:
+- Illustrated graphics: locked safe for no transactions, growth chart for no budgets
+- Clear CTAs to guide first actions
 
 ## Images
 
 **Hero Section**:
-- Large, immersive hero image (h-[600px]) featuring mountain peaks at sunrise/sunset or group of hikers on summit
-- Overlay with semi-transparent gradient (from-black/60 to-transparent)
-- Centered headline and CTA over image
-- Blurred background buttons for primary actions
+- Large hero image (h-[500px]) showing professional workspace with laptop displaying financial graphs, or abstract visualization of data security
+- Semi-transparent overlay gradient for text legibility
+- Centered value proposition with primary CTA buttons (blurred backgrounds)
+- Trust indicators below fold: "Bank-level encryption", "SOC 2 certified", "Your data never sold"
 
 **Supporting Images**:
-- Feature section: Small square images (300x300) showing people using app in outdoor settings
-- Team avatars: Circular, bordered profile images throughout
-- Timezone map: Embedded interactive map component (use Leaflet.js)
-- Empty states: Illustrated graphics of compass/backpack when no meetings scheduled
-
-## Interactions
-
-**Minimal Animations**:
-- Card hover: Subtle lift (translate-y-1) and shadow increase
-- Button press: Scale down slightly (scale-95 active state)
-- Form validation: Shake animation on error
-- Meeting creation success: Confetti burst (use canvas-confetti library)
-- NO scroll-triggered animations
-- NO parallax effects
-
-## Special Features
-
-**Timezone Intelligence**:
-- Auto-detect user timezone
-- Smart suggestions for meeting times based on participant locations
-- Visual conflict indicators when times don't overlap well
-- "Golden hour" highlighting for optimal meeting windows
-
-**Adventure Branding Elements**:
-- Compass rose icon for timezone selector
-- Mountain peak dividers between sections
-- Trail marker icons for progress indicators
-- Topographic line patterns as subtle backgrounds (very light opacity)
-
-## Accessibility
-
-- ARIA labels on all interactive elements
-- Keyboard navigation for meeting creation flow
-- High contrast mode support
-- Screen reader announcements for timezone conversions
-- Focus indicators on all inputs (ring-2 ring-offset-2)
+- Feature sections: Screenshots of actual dashboard views (800x500) showing real interface with sample data
+- Security section: Icon-based illustrations (lock, shield, fingerprint)
+- Testimonial section: Professional headshots (circular, 80x80)
+- Trust badges: Partner bank logos, security certifications (displayed as small badges, 120x40)
 
 ## Page Structure
 
-**Landing Page** (5 sections):
-1. Hero with mountain backdrop and value proposition
-2. Key features grid (3-col: timezone magic, notifications, team collaboration)
-3. Visual demo of timezone converter in action
-4. Social proof - testimonials from outdoor groups/companies
-5. CTA section with signup form
+**Landing Page** (6 sections):
+1. Hero with professional finance workspace imagery, headline emphasizing AI-powered insights and security
+2. Key features grid (4-col): AI Analysis, Fraud Detection, Smart Budgeting, Privacy-First
+3. Interactive demo showing live dashboard with animated charts (use static screenshot with overlay highlights)
+4. Security & privacy section with certifications, encryption details, data handling transparency
+5. Testimonials from users with financial metrics improvements
+6. Pricing/CTA section with clear signup flow
 
-**Dashboard** (authenticated):
-- Top navigation
-- Quick action bar (Create Meeting, View Calendar)
-- Upcoming meetings grid
-- Timezone world clock widget
-- Recent activity feed
+**Main Dashboard**:
+- Top summary row: 4 metric cards (Net Worth, Monthly Spending, Savings Rate, Financial Health Score)
+- Middle section: 2-column layout (Spending Chart + Recent Transactions)
+- Bottom row: 3-column (Budget Overview, Alerts, Insights Feed)
+- Right sidebar: Quick actions, upcoming bills, AI recommendations
 
-**Meeting Detail Page**:
-- Meeting header with adventure type icon
-- Left column: Meeting info, participant list
-- Right column: Interactive timezone map, suggested times
-- Bottom: Reminder settings, actions (edit, delete, share)
+**Transaction Analysis Page**:
+- Filter bar with date range, categories, amounts, merchant search
+- Main transaction table with sortable columns
+- Right panel: Analytics (category breakdown pie chart, spending trends)
+- Bulk action toolbar appears on selection
+
+**Budget Planning Page**:
+- Left: Category budget list with sliders
+- Center: Visual budget allocation donut chart
+- Right: Recommendations panel with AI suggestions
+
+**Financial Health Page**:
+- Large circular score display (0-100) at top
+- Breakdown sections: Credit utilization, savings ratio, spending habits, debt management
+- Historical score trend line chart
+- Action items to improve score
+
+## Interactions
+
+**Minimal, Purposeful Animations**:
+- Chart data: Smooth entry animations on load (fade-in with slight scale)
+- Card hover: Subtle shadow increase (no movement)
+- Number counters: Animated count-up for financial figures on initial render
+- Fraud alerts: Gentle pulse on new detection
+- NO scroll animations
+- NO unnecessary transitions
+
+**Data Refresh**:
+- Pull-to-refresh on mobile
+- Live update indicators (small pulse dot) when new transactions sync
+- Loading skeletons for data fetching (matching card structure)
+
+## Accessibility
+
+- WCAG AA compliant contrast ratios throughout
+- Keyboard shortcuts for common actions (N for new transaction, / for search)
+- Screen reader labels for all chart data points
+- High contrast mode with distinct data visualization patterns
+- Focus indicators (ring-2 ring-offset-2) on interactive elements
+- Alternative text descriptions for financial trends
+
+## Special Considerations
+
+**Data Security Visual Indicators**:
+- Lock icon in navigation showing encrypted connection
+- Last sync timestamp visible on all data displays
+- Session timeout warning with countdown
+- Masked account numbers (show last 4 digits only)
+
+**Trust-Building Elements**:
+- Transparent data usage explanations in tooltips
+- Visible privacy controls throughout interface
+- Clear indication of AI recommendations vs verified data
+- Download/export capabilities for user data ownership

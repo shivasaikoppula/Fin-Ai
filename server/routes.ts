@@ -53,10 +53,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
       }
 
-      // Ensure date is a Date object
+      // Ensure date is a Date object and handle optional fields
       const transactionData = {
         ...data,
         date: typeof data.date === 'string' ? new Date(data.date) : data.date,
+        description: data.description ?? null,
+        location: data.location ?? null,
+        accountId: data.accountId ?? null,
+        isFraudulent: data.isFraudulent ?? false,
+        fraudReason: data.fraudReason ?? null,
       };
 
       // Check for fraud
@@ -136,7 +141,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         if (fraudCheck.isFraudulent) {
           transactionData.isFraudulent = true;
-          transactionData.fraudReason = fraudCheck.reason;
+          transactionData.fraudReason = fraudCheck.reason ?? null;
           fraudulentTransactions.push(transactionData);
         }
 
