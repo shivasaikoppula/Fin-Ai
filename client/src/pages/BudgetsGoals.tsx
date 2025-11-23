@@ -31,7 +31,8 @@ export default function BudgetsGoals() {
   const [showBudgetDialog, setShowBudgetDialog] = useState(false);
   const [showGoalDialog, setShowGoalDialog] = useState(false);
 
-  const userId = "demo-user";
+  const currentUser = JSON.parse(localStorage.getItem("currentUser") || '{"id":"demo-user"}');
+  const userId = currentUser.id;
 
   const { data: budgets = [], isLoading: loadingBudgets } = useQuery<Budget[]>({
     queryKey: [`/api/budgets?userId=${userId}`],

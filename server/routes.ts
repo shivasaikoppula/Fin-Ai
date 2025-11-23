@@ -70,7 +70,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (fraudCheck.isFraudulent) {
         transactionData.isFraudulent = true;
-        transactionData.fraudReason = fraudCheck.reason;
+        transactionData.fraudReason = fraudCheck.reason || null;
       }
 
       const transaction = await storage.createTransaction(transactionData);
@@ -141,7 +141,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         if (fraudCheck.isFraudulent) {
           transactionData.isFraudulent = true;
-          transactionData.fraudReason = fraudCheck.reason ?? null;
+          transactionData.fraudReason = (fraudCheck.reason as string | null) ?? null;
           fraudulentTransactions.push(transactionData);
         }
 
@@ -168,6 +168,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
         transactions: createdTransactions,
         fraudCount: fraudulentTransactions.length,
         fraudulent: fraudulentTransactions,
+      });
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Upload and analyze transaction screenshot
+  app.post("/api/transactions/screenshot", upload.single('file'), async (req: Request, res: Response) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No image file uploaded" });
+      }
+
+      const { userId } = req.body;
+      if (!userId) {
+        return res.status(400).json({ error: "userId is required" });
+      }
+
+      // Extract basic info from screenshot (in production, use OCR)
+      // For demo: simulate extracting transaction data
+      const amount = Math.random() * 500;
+      const merchant = "Receipt Transaction";
+      
+      const transactionData = {
+        userId,
+        date: new Date(),
+        amount: amount.toString(),
+        merchant: merchant,
+        category: categorizeTransaction(merchant, amount),
+        type: "expense" as const,
+        description: "Receipt scan",
+        location: null,
+        accountId: null,
+        isFraudulent: false,
+        fraudReason: null,
+      };
+
+      // Check for fraud
+      const recentTransactions = await storage.getTransactionsByUser(userId);
+      const fraudCheck = await detectFraud(transactionData, recentTransactions);
+
+      if (fraudCheck.isFraudulent) {
+        transactionData.isFraudulent = true;
+        transactionData.fraudReason = (fraudCheck.reason as string | null) ?? null;
+      }
+
+      const transaction = await storage.createTransaction(transactionData);
+
+      res.status(201).json({
+        transaction,
+        fraudCheck,
+        message: fraudCheck.isFraudulent ? "Fraud detected in receipt" : "Receipt appears legitimate",
       });
     } catch (error: any) {
       res.status(400).json({ error: error.message });

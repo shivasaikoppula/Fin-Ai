@@ -10,7 +10,8 @@ import { DollarSign, TrendingUp, TrendingDown, Wallet } from "lucide-react";
 import type { Transaction, Budget, Goal, FinancialHealth } from "@shared/schema";
 
 export default function FinanceDashboard() {
-  const userId = "demo-user";
+  const currentUser = JSON.parse(localStorage.getItem("currentUser") || '{"id":"demo-user"}');
+  const userId = currentUser.id;
 
   const { data: transactions = [], isLoading: loadingTransactions } = useQuery<Transaction[]>({
     queryKey: [`/api/transactions?userId=${userId}`],

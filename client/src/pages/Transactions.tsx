@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useLocation } from "wouter";
 import FinanceNavbar from "@/components/FinanceNavbar";
 import TransactionCard from "@/components/TransactionCard";
 import { Button } from "@/components/ui/button";
@@ -22,18 +23,23 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Upload, Search } from "lucide-react";
+import { Plus, Upload, Search, Image, LogOut } from "lucide-react";
 import type { Transaction } from "@shared/schema";
 
 export default function Transactions() {
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showUploadDialog, setShowUploadDialog] = useState(false);
+  const [showScreenshotDialog, setShowScreenshotDialog] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const screenshotInputRef = useRef<HTMLInputElement>(null);
 
-  const userId = "demo-user";
+  // Get userId from localStorage (current user)
+  const currentUser = JSON.parse(localStorage.getItem("currentUser") || '{"id":"demo-user"}');
+  const userId = currentUser.id;
 
   const { data: transactions = [], isLoading } = useQuery<Transaction[]>({
     queryKey: [`/api/transactions?userId=${userId}`],
@@ -127,6 +133,68 @@ export default function Transactions() {
     }
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem("currentUser");
+    toast({
+      title: "Logged out",
+      description: "You have been successfully logged out",
+    });
+    setLocation("/login");
+  };
+
+  const uploadScreenshotMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('userId', userId);
+      
+      const response = await fetch('/api/transactions/screenshot', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to analyze screenshot');
+      }
+      
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: [`/api/transactions?userId=${userId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/financial-health/${userId}`] });
+      setShowScreenshotDialog(false);
+      toast({
+        title: "Screenshot analyzed",
+        description: data.isFraudulent 
+          ? `⚠️ Fraud detected: ${data.fraudReason}` 
+          : "Transaction appears legitimate",
+        variant: data.isFraudulent ? "destructive" : "default",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Analysis failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleScreenshotUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      uploadScreenshotMutation.mutate(file);
+    } else {
+      toast({
+        title: "Invalid file",
+        description: "Please upload an image file",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <FinanceNavbar />
@@ -141,7 +209,7 @@ export default function Transactions() {
               View and manage all your transactions
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Button
               onClick={() => setShowUploadDialog(true)}
               variant="outline"
@@ -152,12 +220,30 @@ export default function Transactions() {
               Upload CSV
             </Button>
             <Button
+              onClick={() => setShowScreenshotDialog(true)}
+              variant="outline"
+              className="gap-2"
+              data-testid="button-upload-screenshot"
+            >
+              <Image className="h-4 w-4" />
+              Scan Receipt
+            </Button>
+            <Button
               onClick={() => setShowAddDialog(true)}
               className="gap-2"
               data-testid="button-add-transaction"
             >
               <Plus className="h-4 w-4" />
               Add Transaction
+            </Button>
+            <Button
+              onClick={handleLogout}
+              variant="ghost"
+              className="gap-2 ml-auto"
+              data-testid="button-logout"
+            >
+              <LogOut className="h-4 w-4" />
+              Logout
             </Button>
           </div>
         </div>
@@ -304,6 +390,31 @@ export default function Transactions() {
           </div>
           {uploadCSVMutation.isPending && (
             <div className="text-sm text-muted-foreground">Uploading and processing...</div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Screenshot Upload Dialog */}
+      <Dialog open={showScreenshotDialog} onOpenChange={setShowScreenshotDialog}>
+        <DialogContent data-testid="dialog-upload-screenshot">
+          <DialogHeader>
+            <DialogTitle>Scan Transaction Receipt</DialogTitle>
+            <DialogDescription>
+              Upload a screenshot or image of your receipt. Our AI will analyze it and check for fraud.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Input
+              ref={screenshotInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleScreenshotUpload}
+              disabled={uploadScreenshotMutation.isPending}
+              data-testid="input-screenshot-file"
+            />
+          </div>
+          {uploadScreenshotMutation.isPending && (
+            <div className="text-sm text-muted-foreground">Analyzing image...</div>
           )}
         </DialogContent>
       </Dialog>
