@@ -1,0 +1,287 @@
+Great — below is a concise, prioritized, end-to-end **requirements specification** for a Finance AI project (production-ready), covering functional scope, data, ML approach, infra, security, metrics, UX, testing, and deliverables. Use this as your blueprint when designing, building, or scoping work. I also included the local reference file you uploaded for context: `/mnt/data/UX Assignment - 2026 ( updated )  (1).pdf`.
+
+---
+
+# 1) Project goal (one-liner)
+
+Build a privacy-first Finance AI platform that analyzes user transactions, detects fraud, recommends tax and budgeting optimizations, scores financial health, and provides actionable investment and savings guidance — all with explainability and secure deployment.
+
+---
+
+# 2) Core features (high priority)
+
+1. **Transaction ingestion & normalization**
+
+   * Connectors: bank CSV/statement import, UPI/QR/UPI sandbox, credit card CSV, manual entry.
+   * Normalize: merchant name cleaning, category inference, currency conversion, timestamps.
+
+2. **Fraud detection (real-time & batch)**
+
+   * Rule-based realtime checks + ML anomaly detector (behavioral + outlier detection).
+   * Alerting and action (block, flag, require 2FA, notify user).
+
+3. **Spending categorization & patterns**
+
+   * Automated expense categorization (food, travel, bills, subscriptions).
+   * Clustering of recurring payments and subscription detection.
+
+4. **Financial Health Score**
+
+   * Composite score (income stability, expense ratio, savings rate, debt ratio, liquidity).
+   * Explainable breakdown with suggestions.
+
+5. **Budget & Goal Planner**
+
+   * Allow user goals (emergency fund, vacation, EMI payoff).
+   * Automated monthly budget suggestions; track progress.
+
+6. **Tax estimation & optimization**
+
+   * Estimate tax liability for user (country-specific rules).
+   * Suggest tax-saving instruments and projections (e.g., investments, deductions).
+
+7. **Investment analyzer**
+
+   * Portfolio overview (if linked manually).
+   * Risk profile questionnaire → recommend asset allocation (basic).
+   * Simulate simple returns and visualize scenarios.
+
+8. **Privacy & Data Control**
+
+   * Local PII masking, opt-in data sharing, export & delete features.
+   * Differential privacy / anonymization for analytics (optional).
+
+9. **APIs & Integrations**
+
+   * REST API for front-end, webhook notifications, and a sandbox payment/mock API for testing (Razorpay-like).
+
+10. **Admin & Monitoring**
+
+    * Dashboard for fraud review, model drift alerts, data pipeline health.
+
+---
+
+# 3) Functional requirements (detailed)
+
+* **User Accounts**
+
+  * Signup/login (email + password, OAuth optional), multi-factor auth.
+  * Role-based access (user, admin, compliance).
+
+* **Data Import**
+
+  * CSV uploader; parser for common bank formats.
+  * Periodic syncing for connected accounts (if supported).
+
+* **Transaction Processing Pipeline**
+
+  * ETL steps: ingest → clean → classify → enrich (merchant enrichment, geo, MCC mapping).
+
+* **ML Modules**
+
+  * Categorization: multiclass classifier (supervised).
+  * Fraud detection: unsupervised (isolation forest / autoencoder) + supervised classifier for labelled fraud.
+  * Anomaly detection: time-series models (Prophet / LSTM / seasonal decompositions).
+  * Clustering: monthly spend clusters (k-means / HDBSCAN).
+
+* **User UX**
+
+  * Dashboard with KPI strip: total spend, savings, health score, upcoming bills.
+  * Drill-down transaction list with edit/correct category.
+  * Goal set-up wizard and progress visual.
+  * Inline suggestions with “Why this?” explainability.
+
+* **Export & Reports**
+
+  * Download CSV/PDF tax summary, monthly statements.
+
+---
+
+# 4) Data requirements
+
+* **Transactions**: date, amount, currency, merchant, type, account id, raw description, location (optional).
+* **User profile**: income, dependents, tax status, existing loans/investments (optional).
+* **Labels**: category labels, fraudulent flags for supervised training.
+* **External**: merchant name normalization lists, MCC codes, tax rules dataset, FX rates, CPI (for inflation adjustments).
+
+Data volume estimate (starter): 10k–100k transactions for robust classic models; more for deep learning/time-series.
+
+---
+
+# 5) ML approach & models
+
+* **Categorization**
+
+  * Model: LightGBM / XGBoost on tokenized merchant + engineered features (amount patterns, frequency).
+  * Fallback: rule-based mapping for exact merchants.
+
+* **Fraud detection**
+
+  * Real-time rules (amount > threshold, location mismatch).
+  * Offline: IsolationForest / Autoencoder on sequence features for new-user anomaly detection.
+  * Supervised classifier (if labeled fraud exists): XGBoost with class imbalance handling.
+
+* **Spending patterns**
+
+  * Time-series decomposition + clustering for recurring vs one-off detection.
+
+* **Financial Health Score**
+
+  * Weighted index combining normalized finance metrics; learned weights from typical cohorts or expert rules. Provide component breakdown.
+
+* **Explainability**
+
+  * SHAP values (or feature importance) for model outputs (fraud/categorization/score).
+
+---
+
+# 6) Evaluation metrics
+
+* **Categorization**: accuracy, macro-F1, confusion matrix (focus on common categories).
+* **Fraud detection**: precision@k, recall (catch rate), AUC-ROC, false positive rate (minimize for UX).
+* **Anomaly detection**: precision of alerts (human-in-loop validation).
+* **Business metrics**: time saved per user, increase in saved amount, reduction in fraudulent losses (tracked post-deploy).
+
+---
+
+# 7) API & endpoints (essential)
+
+* `POST /ingest/transactions` — upload CSV or JSON.
+* `GET /transactions?user={id}&from=&to=` — list with filters.
+* `POST /transactions/correct` — edit category.
+* `GET /dashboard/{user}` — aggregated KPIs.
+* `POST /goals` — create goal.
+* `GET /opportunity/matrix` — if providing candidate-like mapping (not required here).
+* `POST /fraud/alert` — webhook for alerting.
+* `GET /tax/estimate` — returns tax summary.
+* `GET /health/score` — returns score + breakdown.
+
+Auth: JWT bearer tokens.
+
+---
+
+# 8) UX & frontend requirements
+
+* Responsive dashboard (desktop-first).
+* Explainable callouts near every recommendation (“Because you spent X on Y last month”).
+* Manual correction UX for categories with “teach model” option.
+* Clear alerting UI for fraud with “mark false positive” flow.
+* Goal visualizations (progress bars, projected completion dates).
+
+---
+
+# 9) Security, privacy & compliance
+
+* **Encryption**: at-rest (AES-256) and in-transit (TLS 1.2+).
+* **Auth**: JWT, OAuth optional, MFA for sensitive actions.
+* **PII minimization**: store only needed fields; allow user data export & delete (GDPR right to be forgotten).
+* **Logging/Access control**: audit trails for changes, admin actions.
+* **Compliance**: local tax/regulatory requirements, PCI if handling payments; KYC for payment features.
+* **Threat detection & rate limiting**.
+
+---
+
+# 10) Infrastructure & deployment
+
+* **Cloud**: AWS/GCP/Azure.
+
+* **Components**:
+
+  * Ingest pipeline: serverless (AWS Lambda) or containerized workers (K8s).
+  * Storage: PostgreSQL for metadata + S3 for raw files.
+  * Feature store: Redis or Postgres materialized views.
+  * Model serving: FastAPI/Gunicorn + Docker; or use SageMaker/Vertex AI.
+  * Monitoring: Prometheus + Grafana, Sentry for errors.
+  * CI/CD: GitHub Actions, Docker builds, infra-as-code (Terraform).
+
+* **Scaling**: batch pipelines for training; streaming or near-real-time for fraud detection.
+
+---
+
+# 11) Testing & QA
+
+* **Unit tests** for ETL and model pipelines.
+* **Integration tests** for connectors and endpoints.
+* **E2E tests** for frontend flows (Cypress).
+* **Model validation**: backtesting, holdout sets, cross-validation.
+* **User acceptance testing** with a small pilot group.
+
+---
+
+# 12) Monitoring & operations (MLOps)
+
+* Log model predictions and inputs (with PII masking).
+* Track data drift, concept drift; trigger retraining when thresholds crossed.
+* Model versioning (MLflow) and rollout strategies (canary).
+* Alerting for pipeline failures and abnormal model behavior.
+
+---
+
+# 13) Roadmap & milestones (suggested)
+
+**Phase 0 (2 weeks)**: Project setup, data exploration, wireframes, MVP scoping.
+**Phase 1 (4–6 weeks)**: Build ingestion, baseline categorization model, dashboard UI MVP.
+**Phase 2 (4 weeks)**: Fraud detection rules + basic ML model, quick actions, goal planner.
+**Phase 3 (4 weeks)**: Tax estimator, investment analyzer MVP, explainability.
+**Phase 4 (2–4 weeks)**: Harden security, testing, pilot & feedback, launch.
+Total MVP timeline: ~12–16 weeks.
+
+---
+
+# 14) Deliverables (MVP)
+
+* Data pipeline & ingestion module.
+* Transaction categorization model + retrain pipeline.
+* Real-time rule engine for fraud.
+* Dashboard UI with KPI strip, transactions list, goals.
+* Command/API docs + Postman collection.
+* Rationale doc & model cards (metrics, data used).
+* Pilot deployment and monitoring setup.
+
+---
+
+# 15) Risks & mitigation
+
+* **Poor data quality** → invest early in merchant normalization & heuristics.
+* **High false positives in fraud** → combine ML with human-in-loop review.
+* **Regulatory complexity** → limit tax features to estimation + clear disclaimers; escalate legal review.
+* **Privacy concerns** → default data minimization, explicit consent flows.
+
+---
+
+# 16) Example tech stack (recommended)
+
+* Backend: Python (FastAPI)
+* ML: scikit-learn, LightGBM, PyTorch/TensorFlow (if DL needed)
+* Data: PostgreSQL, Airflow (or Prefect), S3
+* Frontend: React + Tailwind/CSS; Charting: Recharts/Plotly
+* Deployment: Docker, Kubernetes (EKS/GKE), GitHub Actions
+* Monitoring: Prometheus, Grafana, Sentry
+* MLOps: MLflow or SageMaker
+
+---
+
+# 17) Final notes & next steps
+
+1. **Define MVP scope** explicitly (which features go into MVP).
+2. **Collect sample transaction data** (anonymized) and produce an initial data profile.
+3. **Prototype UI flows** (dashboard, alerts, corrections) in Figma and validate with 3–5 users.
+4. **Implement ingestion + categorization baseline** to quickly generate value.
+5. **Pilot fraud rules** with small user base before model-based blocking.
+
+---
+
+### Reference uploaded file (for any assignment context you used earlier):
+
+`/mnt/data/UX Assignment - 2026 ( updated )  (1).pdf`
+
+---
+
+If you want I can:
+
+* produce a one-page MVP scope doc, or
+* draft a 12-week sprint plan with tasks, or
+* generate starter code scaffolding (FastAPI + sample pipelines), or
+* build the Figma dashboard wireframe for the Finance AI dashboard.
+
+Which of the above next?
