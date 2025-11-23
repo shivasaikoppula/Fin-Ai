@@ -257,8 +257,6 @@ export default function LoginRegister({ onAuthChange }: { onAuthChange?: () => v
                           <Input
                             placeholder="john_doe"
                             {...field}
-                            value={field.value || ""}
-                            onChange={(e) => field.onChange(e.target.value)}
                             data-testid="input-username-register"
                             disabled={isLoading}
                             className="transition"
@@ -280,8 +278,6 @@ export default function LoginRegister({ onAuthChange }: { onAuthChange?: () => v
                             type="email"
                             placeholder="you@example.com"
                             {...field}
-                            value={field.value || ""}
-                            onChange={(e) => field.onChange(e.target.value)}
                             data-testid="input-email"
                             disabled={isLoading}
                             className="transition"
@@ -304,8 +300,6 @@ export default function LoginRegister({ onAuthChange }: { onAuthChange?: () => v
                               type={showPassword ? "text" : "password"}
                               placeholder="••••••"
                               {...field}
-                              value={field.value || ""}
-                              onChange={(e) => field.onChange(e.target.value)}
                               data-testid="input-password-register"
                               disabled={isLoading}
                               className="pr-10 transition"
@@ -337,8 +331,6 @@ export default function LoginRegister({ onAuthChange }: { onAuthChange?: () => v
                               type={showConfirmPassword ? "text" : "password"}
                               placeholder="••••••"
                               {...field}
-                              value={field.value || ""}
-                              onChange={(e) => field.onChange(e.target.value)}
                               data-testid="input-confirm-password"
                               disabled={isLoading}
                               className="pr-10 transition"
@@ -369,8 +361,6 @@ export default function LoginRegister({ onAuthChange }: { onAuthChange?: () => v
                             type="number"
                             placeholder="5000"
                             {...field}
-                            value={field.value || ""}
-                            onChange={(e) => field.onChange(e.target.value)}
                             data-testid="input-income"
                             disabled={isLoading}
                             className="transition"
@@ -404,8 +394,6 @@ export default function LoginRegister({ onAuthChange }: { onAuthChange?: () => v
                           <Input
                             placeholder="Enter your username"
                             {...field}
-                            value={field.value || ""}
-                            onChange={(e) => field.onChange(e.target.value)}
                             data-testid="input-username-login"
                             disabled={isLoading}
                             className="transition"
@@ -429,8 +417,6 @@ export default function LoginRegister({ onAuthChange }: { onAuthChange?: () => v
                               type={showPassword ? "text" : "password"}
                               placeholder="••••••"
                               {...field}
-                              value={field.value || ""}
-                              onChange={(e) => field.onChange(e.target.value)}
                               data-testid="input-password-login"
                               disabled={isLoading}
                               className="pr-10 transition"
