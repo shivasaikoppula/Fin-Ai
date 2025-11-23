@@ -1,5 +1,4 @@
-import { useState } from "react";
-import React from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,20 +12,17 @@ import { DollarSign, Eye, EyeOff, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const loginSchema = z.object({
-  username: z.string().min(3, "Username must be at least 3 characters").max(50, "Username too long"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  username: z.string().min(1, "Username is required"),
+  password: z.string().min(1, "Password is required"),
 });
 
 const registerSchema = z.object({
   username: z.string()
     .min(3, "Username must be at least 3 characters")
-    .max(50, "Username too long")
+    .max(20, "Username must be less than 20 characters")
     .regex(/^[a-zA-Z0-9_-]+$/, "Username can only contain letters, numbers, hyphens, and underscores"),
-  email: z.string().email("Please enter a valid email address"),
-  password: z.string()
-    .min(6, "Password must be at least 6 characters")
-    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
-    .regex(/[0-9]/, "Password must contain at least one number"),
+  email: z.string().email("Please enter a valid email"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
   confirmPassword: z.string(),
   monthlyIncome: z.string().optional(),
 }).refine((data) => data.password === data.confirmPassword, {
@@ -55,47 +51,71 @@ export default function LoginRegister({ onAuthChange }: { onAuthChange?: () => v
   const [apiError, setApiError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  // Initialize demo user on first load
-  React.useEffect(() => {
+  // Initialize demo user and check for existing session
+  useEffect(() => {
     const users = localStorage.getItem("finance_users");
     if (!users) {
       const demoUser: User = {
         id: "user_demo",
         username: "demo",
         email: "demo@example.com",
-        password: "Demo123",
+        password: "demo123",
         monthlyIncome: "5000",
         createdAt: new Date().toISOString(),
       };
-      localStorage.setItem("finance_users", JSON.stringify({ user_demo: demoUser }));
+      const usersDb = { user_demo: demoUser };
+      localStorage.setItem("finance_users", JSON.stringify(usersDb));
+      console.log("Demo user initialized:", demoUser);
     }
   }, []);
 
   const loginForm = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: { username: "", password: "" },
-    mode: "onBlur",
+    mode: "onChange",
   });
 
   const registerForm = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
     defaultValues: { username: "", email: "", password: "", confirmPassword: "", monthlyIncome: "" },
-    mode: "onBlur",
+    mode: "onChange",
   });
 
   const handleLogin = async (data: LoginFormData) => {
     setIsLoading(true);
     setApiError(null);
-    
+
     try {
-      // Simulate network delay
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 300));
 
-      const storedUsers = JSON.parse(localStorage.getItem("finance_users") || "{}");
-      const user = Object.values(storedUsers).find((u: any) => u.username === data.username) as User | undefined;
+      const storedUsersStr = localStorage.getItem("finance_users");
+      if (!storedUsersStr) {
+        setApiError("No users found. Please register first.");
+        toast({
+          title: "Login Failed",
+          description: "No users found",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
 
-      if (!user || user.password !== data.password) {
-        setApiError("Invalid username or password");
+      const storedUsers = JSON.parse(storedUsersStr);
+      const user = Object.values(storedUsers).find((u: any) => u.username === data.username.toLowerCase()) as User | undefined;
+
+      if (!user) {
+        setApiError("User not found");
+        toast({
+          title: "Login Failed",
+          description: "Invalid username or password",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      if (user.password !== data.password) {
+        setApiError("Invalid password");
         toast({
           title: "Login Failed",
           description: "Invalid username or password",
@@ -108,11 +128,15 @@ export default function LoginRegister({ onAuthChange }: { onAuthChange?: () => v
       localStorage.setItem("currentUser", JSON.stringify(user));
       toast({
         title: "Login Successful",
-        description: `Welcome back, ${data.username}!`,
+        description: `Welcome back, ${user.username}!`,
       });
-      
+
       if (onAuthChange) onAuthChange();
-      setLocation("/dashboard");
+      
+      // Small delay for toast to show
+      setTimeout(() => {
+        setLocation("/dashboard");
+      }, 300);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "An error occurred";
       setApiError(errorMessage);
@@ -121,7 +145,6 @@ export default function LoginRegister({ onAuthChange }: { onAuthChange?: () => v
         description: errorMessage,
         variant: "destructive",
       });
-    } finally {
       setIsLoading(false);
     }
   };
@@ -131,12 +154,13 @@ export default function LoginRegister({ onAuthChange }: { onAuthChange?: () => v
     setApiError(null);
 
     try {
-      // Simulate network delay
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 300));
 
-      const storedUsers = JSON.parse(localStorage.getItem("finance_users") || "{}");
+      const storedUsersStr = localStorage.getItem("finance_users");
+      const storedUsers = storedUsersStr ? JSON.parse(storedUsersStr) : {};
+
       const userExists = Object.values(storedUsers).some(
-        (u: any) => u.username === data.username || u.email === data.email
+        (u: any) => u.username.toLowerCase() === data.username.toLowerCase() || u.email.toLowerCase() === data.email.toLowerCase()
       );
 
       if (userExists) {
@@ -152,8 +176,8 @@ export default function LoginRegister({ onAuthChange }: { onAuthChange?: () => v
 
       const newUser: User = {
         id: `user_${Date.now()}`,
-        username: data.username,
-        email: data.email,
+        username: data.username.toLowerCase(),
+        email: data.email.toLowerCase(),
         password: data.password,
         monthlyIncome: data.monthlyIncome || "0",
         createdAt: new Date().toISOString(),
@@ -165,11 +189,14 @@ export default function LoginRegister({ onAuthChange }: { onAuthChange?: () => v
 
       toast({
         title: "Registration Successful",
-        description: `Welcome, ${data.username}!`,
+        description: `Welcome, ${newUser.username}!`,
       });
 
       if (onAuthChange) onAuthChange();
-      setLocation("/dashboard");
+
+      setTimeout(() => {
+        setLocation("/dashboard");
+      }, 300);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "An error occurred";
       setApiError(errorMessage);
@@ -178,7 +205,6 @@ export default function LoginRegister({ onAuthChange }: { onAuthChange?: () => v
         description: errorMessage,
         variant: "destructive",
       });
-    } finally {
       setIsLoading(false);
     }
   };
@@ -231,6 +257,8 @@ export default function LoginRegister({ onAuthChange }: { onAuthChange?: () => v
                           <Input
                             placeholder="john_doe"
                             {...field}
+                            value={field.value || ""}
+                            onChange={(e) => field.onChange(e.target.value)}
                             data-testid="input-username-register"
                             disabled={isLoading}
                             className="transition"
@@ -252,6 +280,8 @@ export default function LoginRegister({ onAuthChange }: { onAuthChange?: () => v
                             type="email"
                             placeholder="you@example.com"
                             {...field}
+                            value={field.value || ""}
+                            onChange={(e) => field.onChange(e.target.value)}
                             data-testid="input-email"
                             disabled={isLoading}
                             className="transition"
@@ -274,6 +304,8 @@ export default function LoginRegister({ onAuthChange }: { onAuthChange?: () => v
                               type={showPassword ? "text" : "password"}
                               placeholder="••••••"
                               {...field}
+                              value={field.value || ""}
+                              onChange={(e) => field.onChange(e.target.value)}
                               data-testid="input-password-register"
                               disabled={isLoading}
                               className="pr-10 transition"
@@ -305,6 +337,8 @@ export default function LoginRegister({ onAuthChange }: { onAuthChange?: () => v
                               type={showConfirmPassword ? "text" : "password"}
                               placeholder="••••••"
                               {...field}
+                              value={field.value || ""}
+                              onChange={(e) => field.onChange(e.target.value)}
                               data-testid="input-confirm-password"
                               disabled={isLoading}
                               className="pr-10 transition"
@@ -335,6 +369,8 @@ export default function LoginRegister({ onAuthChange }: { onAuthChange?: () => v
                             type="number"
                             placeholder="5000"
                             {...field}
+                            value={field.value || ""}
+                            onChange={(e) => field.onChange(e.target.value)}
                             data-testid="input-income"
                             disabled={isLoading}
                             className="transition"
@@ -363,11 +399,13 @@ export default function LoginRegister({ onAuthChange }: { onAuthChange?: () => v
                     name="username"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Username or Email</FormLabel>
+                        <FormLabel>Username</FormLabel>
                         <FormControl>
                           <Input
                             placeholder="Enter your username"
                             {...field}
+                            value={field.value || ""}
+                            onChange={(e) => field.onChange(e.target.value)}
                             data-testid="input-username-login"
                             disabled={isLoading}
                             className="transition"
@@ -391,6 +429,8 @@ export default function LoginRegister({ onAuthChange }: { onAuthChange?: () => v
                               type={showPassword ? "text" : "password"}
                               placeholder="••••••"
                               {...field}
+                              value={field.value || ""}
+                              onChange={(e) => field.onChange(e.target.value)}
                               data-testid="input-password-login"
                               disabled={isLoading}
                               className="pr-10 transition"
@@ -451,7 +491,7 @@ export default function LoginRegister({ onAuthChange }: { onAuthChange?: () => v
                   <span className="font-mono">username: demo</span>
                 </p>
                 <p className="text-xs text-blue-800 dark:text-blue-300">
-                  <span className="font-mono">password: Demo123</span>
+                  <span className="font-mono">password: demo123</span>
                 </p>
               </div>
             )}
