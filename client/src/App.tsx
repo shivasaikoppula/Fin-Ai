@@ -10,17 +10,7 @@ import BudgetsGoals from "@/pages/BudgetsGoals";
 import LoginRegister from "@/pages/LoginRegister";
 import NotFound from "@/pages/not-found";
 
-function Router({ isAuthenticated }: { isAuthenticated: boolean }) {
-  if (!isAuthenticated) {
-    return (
-      <Switch>
-        <Route path="/" component={LoginRegister} />
-        <Route path="/login" component={LoginRegister} />
-        <Route component={LoginRegister} />
-      </Switch>
-    );
-  }
-
+function Router() {
   return (
     <Switch>
       <Route path="/" component={FinanceDashboard} />
@@ -41,15 +31,29 @@ function App() {
     // Check if user is logged in via localStorage
     const currentUser = localStorage.getItem("currentUser");
     if (currentUser) {
-      setIsAuthenticated(true);
+      try {
+        JSON.parse(currentUser); // Validate it's valid JSON
+        setIsAuthenticated(true);
+      } catch {
+        localStorage.removeItem("currentUser");
+        setIsAuthenticated(false);
+      }
     }
     setIsLoading(false);
   }, []);
 
+  const handleAuthChange = () => {
+    const currentUser = localStorage.getItem("currentUser");
+    setIsAuthenticated(!!currentUser);
+  };
+
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-lg text-gray-600">Loading...</div>
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-green-50 dark:from-slate-950 dark:to-slate-900">
+        <div className="text-center space-y-4">
+          <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto"></div>
+          <p className="text-lg font-semibold text-gray-600 dark:text-gray-400">Loading FinanceAI...</p>
+        </div>
       </div>
     );
   }
@@ -58,7 +62,11 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
-        <Router isAuthenticated={isAuthenticated} />
+        {!isAuthenticated ? (
+          <LoginRegister onAuthChange={handleAuthChange} />
+        ) : (
+          <Router />
+        )}
       </TooltipProvider>
     </QueryClientProvider>
   );
