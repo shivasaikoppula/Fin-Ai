@@ -1,11 +1,24 @@
-import { DollarSign, LayoutDashboard, Receipt, Target, TrendingUp, Bell, Shield } from "lucide-react";
+import { DollarSign, LayoutDashboard, Receipt, Target, TrendingUp, Bell, Shield, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import ThemeToggle from "./ThemeToggle";
 import { Link, useLocation } from "wouter";
+import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
 
-export default function FinanceNavbar() {
+export default function FinanceNavbar({ onLogout }: { onLogout?: () => void }) {
   const [location] = useLocation();
+  const { toast } = useToast();
+
+  const handleLogout = () => {
+    localStorage.removeItem("currentUser");
+    toast({
+      title: "Logged out",
+      description: "You have been successfully logged out",
+    });
+    if (onLogout) onLogout();
+    window.location.href = "/";
+  };
 
   return (
     <nav className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur">
@@ -66,6 +79,15 @@ export default function FinanceNavbar() {
               <Badge className="absolute top-1 right-1 h-2 w-2 p-0 bg-destructive" />
             </Button>
             <ThemeToggle />
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleLogout}
+              data-testid="button-navbar-logout"
+              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+            >
+              <LogOut className="h-5 w-5" />
+            </Button>
           </div>
         </div>
       </div>
