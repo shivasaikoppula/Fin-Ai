@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import FinanceNavbar from "@/components/FinanceNavbar";
 import HealthScoreCard from "@/components/HealthScoreCard";
@@ -7,88 +6,76 @@ import BudgetCard from "@/components/BudgetCard";
 import GoalCard from "@/components/GoalCard";
 import FraudAlert from "@/components/FraudAlert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, TrendingUp, TrendingDown, Wallet, AlertTriangle } from "lucide-react";
+import { DollarSign, TrendingUp, TrendingDown, Wallet } from "lucide-react";
+import type { Transaction, Budget, Goal, FinancialHealth } from "@shared/schema";
 
 export default function FinanceDashboard() {
-  // TODO: replace with real user ID from auth
   const userId = "demo-user";
 
-  // TODO: remove mock data - fetch from API
-  const mockDashboardData = {
-    totalSpend: 3245.67,
-    totalIncome: 5200.00,
-    savings: 1954.33,
-    fraudAlerts: 2,
-    healthScore: 78,
-    transactionCount: 42,
-  };
+  const { data: transactions = [], isLoading: loadingTransactions } = useQuery<Transaction[]>({
+    queryKey: [`/api/transactions?userId=${userId}`],
+  });
 
-  const mockHealthComponents = {
-    incomeStability: 85,
-    expenseRatio: 72,
-    savingsRate: 68,
-    debtRatio: 80,
-    liquidity: 75,
-  };
+  const { data: budgets = [], isLoading: loadingBudgets } = useQuery<Budget[]>({
+    queryKey: [`/api/budgets?userId=${userId}`],
+  });
 
-  const mockTransactions = [
-    {
-      id: "1",
-      merchant: "Whole Foods Market",
-      amount: "127.43",
-      category: "Groceries",
-      date: new Date(2025, 10, 22),
-      type: "expense" as const,
-    },
-    {
-      id: "2",
-      merchant: "Shell Gas Station",
-      amount: "52.18",
-      category: "Transportation",
-      date: new Date(2025, 10, 21),
-      type: "expense" as const,
-    },
-    {
-      id: "3",
-      merchant: "Monthly Salary",
-      amount: "5200.00",
-      category: "Income",
-      date: new Date(2025, 10, 1),
-      type: "income" as const,
-    },
-    {
-      id: "4",
-      merchant: "Unknown Merchant XYZ",
-      amount: "999.99",
-      category: "Shopping",
-      date: new Date(2025, 10, 23),
-      type: "expense" as const,
-      isFraudulent: true,
-    },
-  ];
+  const { data: goals = [], isLoading: loadingGoals } = useQuery<Goal[]>({
+    queryKey: [`/api/goals?userId=${userId}`],
+  });
 
-  const mockBudgets = [
-    { category: "Food & Dining", spent: 425.67, limit: 500, period: "monthly" },
-    { category: "Transportation", spent: 280.50, limit: 250, period: "monthly" },
-    { category: "Shopping", spent: 180.00, limit: 300, period: "monthly" },
-  ];
+  const { data: healthData } = useQuery<FinancialHealth>({
+    queryKey: [`/api/financial-health/${userId}`],
+  });
 
-  const mockGoals = [
-    {
-      name: "Emergency Fund",
-      current: 3500,
-      target: 10000,
-      deadline: new Date(2026, 5, 1),
-      type: "emergency_fund" as const,
-    },
-    {
-      name: "Vacation to Europe",
-      current: 1200,
-      target: 3000,
-      deadline: new Date(2026, 2, 15),
-      type: "vacation" as const,
-    },
-  ];
+  // Calculate dashboard metrics
+  const currentMonth = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
+  
+  const monthlyTransactions = transactions.filter(t => {
+    const date = new Date(t.date);
+    return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
+  });
+
+  const totalIncome = monthlyTransactions
+    .filter(t => t.type === 'income')
+    .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+
+  const totalSpend = monthlyTransactions
+    .filter(t => t.type === 'expense')
+    .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+
+  const savings = totalIncome - totalSpend;
+
+  const fraudulentTransactions = transactions.filter(t => t.isFraudulent);
+  const recentTransactions = [...transactions]
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .slice(0, 5);
+
+  // Calculate budget metrics
+  const budgetMetrics = budgets.map(budget => {
+    const categoryTransactions = monthlyTransactions.filter(
+      t => t.category === budget.category && t.type === 'expense'
+    );
+    const spent = categoryTransactions.reduce((sum, t) => sum + parseFloat(t.amount), 0);
+    return {
+      category: budget.category,
+      spent,
+      limit: parseFloat(budget.amount),
+      period: budget.period,
+    };
+  });
+
+  if (loadingTransactions || loadingBudgets || loadingGoals) {
+    return (
+      <div className="min-h-screen bg-background">
+        <FinanceNavbar />
+        <div className="max-w-7xl mx-auto px-6 py-8">
+          <div className="text-center py-16 text-muted-foreground">Loading your financial data...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -105,15 +92,18 @@ export default function FinanceDashboard() {
         </div>
 
         {/* Fraud Alerts */}
-        {mockTransactions.filter(t => t.isFraudulent).length > 0 && (
-          <div className="mb-6">
-            <FraudAlert
-              merchant="Unknown Merchant XYZ"
-              amount="999.99"
-              reason="First-time merchant with large amount"
-              onDismiss={() => console.log('Fraud dismissed')}
-              onConfirm={() => console.log('Transaction confirmed legitimate')}
-            />
+        {fraudulentTransactions.length > 0 && (
+          <div className="mb-6 space-y-4">
+            {fraudulentTransactions.slice(0, 3).map((transaction) => (
+              <FraudAlert
+                key={transaction.id}
+                merchant={transaction.merchant}
+                amount={transaction.amount}
+                reason={transaction.fraudReason || "Suspicious activity detected"}
+                onDismiss={() => console.log('Fraud dismissed')}
+                onConfirm={() => console.log('Transaction confirmed legitimate')}
+              />
+            ))}
           </div>
         )}
 
@@ -126,7 +116,7 @@ export default function FinanceDashboard() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold font-mono text-accent">
-                ${mockDashboardData.totalIncome.toFixed(2)}
+                ${totalIncome.toFixed(2)}
               </div>
               <p className="text-xs text-muted-foreground">This month</p>
             </CardContent>
@@ -139,7 +129,7 @@ export default function FinanceDashboard() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold font-mono">
-                ${mockDashboardData.totalSpend.toFixed(2)}
+                ${totalSpend.toFixed(2)}
               </div>
               <p className="text-xs text-muted-foreground">This month</p>
             </CardContent>
@@ -151,51 +141,103 @@ export default function FinanceDashboard() {
               <Wallet className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold font-mono text-primary">
-                ${mockDashboardData.savings.toFixed(2)}
+              <div className={`text-2xl font-bold font-mono ${savings >= 0 ? 'text-primary' : 'text-destructive'}`}>
+                ${savings.toFixed(2)}
               </div>
               <p className="text-xs text-muted-foreground">
-                {((mockDashboardData.savings / mockDashboardData.totalIncome) * 100).toFixed(1)}% savings rate
+                {totalIncome > 0 ? ((savings / totalIncome) * 100).toFixed(1) : 0}% savings rate
               </p>
             </CardContent>
           </Card>
 
-          <HealthScoreCard
-            score={mockDashboardData.healthScore}
-            change={5}
-            components={mockHealthComponents}
-          />
+          {healthData ? (
+            <HealthScoreCard
+              score={healthData.score}
+              components={{
+                incomeStability: healthData.incomeStability,
+                expenseRatio: healthData.expenseRatio,
+                savingsRate: healthData.savingsRate,
+                debtRatio: healthData.debtRatio,
+                liquidity: healthData.liquidity,
+              }}
+            />
+          ) : (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium">Financial Health Score</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-muted-foreground text-sm">
+                  Add more transactions to calculate your health score
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Recent Transactions */}
           <div className="lg:col-span-2 space-y-4">
             <h2 className="font-serif font-semibold text-xl">Recent Transactions</h2>
-            <div className="space-y-2">
-              {mockTransactions.map((transaction) => (
-                <TransactionCard key={transaction.id} {...transaction} />
-              ))}
-            </div>
+            {recentTransactions.length > 0 ? (
+              <div className="space-y-2">
+                {recentTransactions.map((transaction) => (
+                  <TransactionCard
+                    key={transaction.id}
+                    id={transaction.id}
+                    merchant={transaction.merchant}
+                    amount={transaction.amount}
+                    category={transaction.category}
+                    date={new Date(transaction.date)}
+                    type={transaction.type as "income" | "expense"}
+                    isFraudulent={transaction.isFraudulent}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-16 text-muted-foreground">
+                No transactions yet. Add your first transaction to get started.
+              </div>
+            )}
           </div>
 
           {/* Sidebar: Budgets and Goals */}
           <div className="space-y-6">
             <div>
               <h2 className="font-serif font-semibold text-xl mb-4">Budget Overview</h2>
-              <div className="space-y-4">
-                {mockBudgets.map((budget, idx) => (
-                  <BudgetCard key={idx} {...budget} />
-                ))}
-              </div>
+              {budgetMetrics.length > 0 ? (
+                <div className="space-y-4">
+                  {budgetMetrics.slice(0, 3).map((budget, idx) => (
+                    <BudgetCard key={idx} {...budget} />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-sm text-muted-foreground">
+                  No budgets set. Create budgets to track your spending.
+                </div>
+              )}
             </div>
 
             <div>
               <h2 className="font-serif font-semibold text-xl mb-4">Active Goals</h2>
-              <div className="space-y-4">
-                {mockGoals.map((goal, idx) => (
-                  <GoalCard key={idx} {...goal} />
-                ))}
-              </div>
+              {goals.length > 0 ? (
+                <div className="space-y-4">
+                  {goals.filter(g => g.status === 'active').slice(0, 2).map((goal) => (
+                    <GoalCard
+                      key={goal.id}
+                      name={goal.name}
+                      current={parseFloat(goal.currentAmount)}
+                      target={parseFloat(goal.targetAmount)}
+                      deadline={goal.deadline ? new Date(goal.deadline) : undefined}
+                      type={goal.type as any}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-sm text-muted-foreground">
+                  No goals set. Create goals to track your financial progress.
+                </div>
+              )}
             </div>
           </div>
         </div>

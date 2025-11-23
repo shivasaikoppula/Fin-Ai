@@ -12,56 +12,48 @@ export default function FinanceNavbar() {
       <div className="max-w-7xl mx-auto px-6 py-4">
         <div className="flex items-center justify-between gap-4">
           <Link href="/" data-testid="link-home">
-            <a className="flex items-center gap-2 hover-elevate active-elevate-2 rounded-md px-3 py-2">
+            <div className="flex items-center gap-2 hover-elevate active-elevate-2 rounded-md px-3 py-2 cursor-pointer">
               <DollarSign className="h-6 w-6 text-primary" />
               <span className="font-serif font-bold text-xl">Finance AI</span>
-            </a>
+            </div>
           </Link>
 
           <div className="hidden md:flex items-center gap-2">
             <Link href="/dashboard" data-testid="link-dashboard">
-              <a>
-                <Button
-                  variant={location === "/dashboard" ? "secondary" : "ghost"}
-                  className="gap-2"
-                >
-                  <LayoutDashboard className="h-4 w-4" />
-                  Dashboard
-                </Button>
-              </a>
+              <Button
+                variant={location === "/dashboard" ? "secondary" : "ghost"}
+                className="gap-2"
+              >
+                <LayoutDashboard className="h-4 w-4" />
+                Dashboard
+              </Button>
             </Link>
             <Link href="/transactions" data-testid="link-transactions">
-              <a>
-                <Button
-                  variant={location === "/transactions" ? "secondary" : "ghost"}
-                  className="gap-2"
-                >
-                  <Receipt className="h-4 w-4" />
-                  Transactions
-                </Button>
-              </a>
+              <Button
+                variant={location === "/transactions" ? "secondary" : "ghost"}
+                className="gap-2"
+              >
+                <Receipt className="h-4 w-4" />
+                Transactions
+              </Button>
             </Link>
             <Link href="/budgets" data-testid="link-budgets">
-              <a>
-                <Button
-                  variant={location === "/budgets" ? "secondary" : "ghost"}
-                  className="gap-2"
-                >
-                  <Target className="h-4 w-4" />
-                  Budgets & Goals
-                </Button>
-              </a>
+              <Button
+                variant={location === "/budgets" ? "secondary" : "ghost"}
+                className="gap-2"
+              >
+                <Target className="h-4 w-4" />
+                Budgets & Goals
+              </Button>
             </Link>
             <Link href="/insights" data-testid="link-insights">
-              <a>
-                <Button
-                  variant={location === "/insights" ? "secondary" : "ghost"}
-                  className="gap-2"
-                >
-                  <TrendingUp className="h-4 w-4" />
-                  Insights
-                </Button>
-              </a>
+              <Button
+                variant={location === "/insights" ? "secondary" : "ghost"}
+                className="gap-2"
+              >
+                <TrendingUp className="h-4 w-4" />
+                Insights
+              </Button>
             </Link>
           </div>
 

@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import FinanceNavbar from "@/components/FinanceNavbar";
 import TransactionCard from "@/components/TransactionCard";
 import { Button } from "@/components/ui/button";
@@ -10,94 +12,119 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Upload, Search, Filter } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
+import { Plus, Upload, Search } from "lucide-react";
+import type { Transaction } from "@shared/schema";
 
 export default function Transactions() {
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showUploadDialog, setShowUploadDialog] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // TODO: remove mock data - fetch from API
-  const mockTransactions = [
-    {
-      id: "1",
-      merchant: "Whole Foods Market",
-      amount: "127.43",
-      category: "Groceries",
-      date: new Date(2025, 10, 22),
-      type: "expense" as const,
-    },
-    {
-      id: "2",
-      merchant: "Shell Gas Station",
-      amount: "52.18",
-      category: "Transportation",
-      date: new Date(2025, 10, 21),
-      type: "expense" as const,
-    },
-    {
-      id: "3",
-      merchant: "Amazon.com",
-      amount: "89.99",
-      category: "Shopping",
-      date: new Date(2025, 10, 20),
-      type: "expense" as const,
-    },
-    {
-      id: "4",
-      merchant: "Starbucks",
-      amount: "15.67",
-      category: "Food & Dining",
-      date: new Date(2025, 10, 19),
-      type: "expense" as const,
-    },
-    {
-      id: "5",
-      merchant: "Monthly Salary",
-      amount: "5200.00",
-      category: "Income",
-      date: new Date(2025, 10, 1),
-      type: "income" as const,
-    },
-    {
-      id: "6",
-      merchant: "Netflix Subscription",
-      amount: "15.99",
-      category: "Entertainment",
-      date: new Date(2025, 10, 15),
-      type: "expense" as const,
-    },
-    {
-      id: "7",
-      merchant: "Uber",
-      amount: "28.50",
-      category: "Transportation",
-      date: new Date(2025, 10, 18),
-      type: "expense" as const,
-    },
-    {
-      id: "8",
-      merchant: "CVS Pharmacy",
-      amount: "42.33",
-      category: "Healthcare",
-      date: new Date(2025, 10, 17),
-      type: "expense" as const,
-    },
-  ];
+  const userId = "demo-user";
 
-  const filteredTransactions = mockTransactions.filter((t) => {
+  const { data: transactions = [], isLoading } = useQuery<Transaction[]>({
+    queryKey: [`/api/transactions?userId=${userId}`],
+  });
+
+  const createTransactionMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await apiRequest('POST', '/api/transactions', data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/transactions?userId=${userId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/financial-health/${userId}`] });
+      setShowAddDialog(false);
+      toast({
+        title: "Transaction created",
+        description: "Your transaction has been added successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const uploadCSVMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('userId', userId);
+      
+      const response = await fetch('/api/transactions/upload', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to upload CSV');
+      }
+      
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: [`/api/transactions?userId=${userId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/financial-health/${userId}`] });
+      setShowUploadDialog(false);
+      toast({
+        title: "CSV uploaded successfully",
+        description: `Imported ${data.created} transactions (${data.fraudulent} flagged as potentially fraudulent)`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Upload failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const filteredTransactions = transactions.filter((t) => {
     const matchesSearch = t.merchant.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = categoryFilter === "all" || t.category === categoryFilter;
     return matchesSearch && matchesCategory;
   });
 
-  const handleUploadCSV = () => {
-    console.log('Upload CSV clicked');
-    // TODO: implement CSV upload dialog
+  const handleAddTransaction = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    
+    createTransactionMutation.mutate({
+      userId,
+      date: formData.get('date'),
+      amount: formData.get('amount'),
+      merchant: formData.get('merchant'),
+      category: formData.get('category'),
+      type: parseFloat(formData.get('amount') as string) >= 0 ? 'income' : 'expense',
+      description: formData.get('description') || null,
+    });
   };
 
-  const handleAddTransaction = () => {
-    console.log('Add transaction clicked');
-    // TODO: implement add transaction dialog
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      uploadCSVMutation.mutate(file);
+    }
   };
 
   return (
@@ -115,11 +142,20 @@ export default function Transactions() {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button onClick={handleUploadCSV} variant="outline" className="gap-2" data-testid="button-upload-csv">
+            <Button
+              onClick={() => setShowUploadDialog(true)}
+              variant="outline"
+              className="gap-2"
+              data-testid="button-upload-csv"
+            >
               <Upload className="h-4 w-4" />
               Upload CSV
             </Button>
-            <Button onClick={handleAddTransaction} className="gap-2" data-testid="button-add-transaction">
+            <Button
+              onClick={() => setShowAddDialog(true)}
+              className="gap-2"
+              data-testid="button-add-transaction"
+            >
               <Plus className="h-4 w-4" />
               Add Transaction
             </Button>
@@ -156,18 +192,121 @@ export default function Transactions() {
         </div>
 
         {/* Transaction List */}
-        <div className="space-y-2">
-          {filteredTransactions.length > 0 ? (
-            filteredTransactions.map((transaction) => (
-              <TransactionCard key={transaction.id} {...transaction} />
-            ))
-          ) : (
-            <div className="text-center py-16 text-muted-foreground">
-              No transactions found matching your filters.
-            </div>
-          )}
-        </div>
+        {isLoading ? (
+          <div className="text-center py-16 text-muted-foreground">Loading transactions...</div>
+        ) : filteredTransactions.length > 0 ? (
+          <div className="space-y-2">
+            {filteredTransactions.map((transaction) => (
+              <TransactionCard
+                key={transaction.id}
+                id={transaction.id}
+                merchant={transaction.merchant}
+                amount={transaction.amount}
+                category={transaction.category}
+                date={new Date(transaction.date)}
+                type={transaction.type as "income" | "expense"}
+                isFraudulent={transaction.isFraudulent}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-16 text-muted-foreground">
+            No transactions found matching your filters.
+          </div>
+        )}
       </div>
+
+      {/* Add Transaction Dialog */}
+      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+        <DialogContent data-testid="dialog-add-transaction">
+          <DialogHeader>
+            <DialogTitle>Add Transaction</DialogTitle>
+            <DialogDescription>Enter the transaction details below</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleAddTransaction}>
+            <div className="space-y-4 py-4">
+              <div>
+                <Label htmlFor="merchant">Merchant</Label>
+                <Input id="merchant" name="merchant" required data-testid="input-merchant" />
+              </div>
+              <div>
+                <Label htmlFor="amount">Amount</Label>
+                <Input
+                  id="amount"
+                  name="amount"
+                  type="number"
+                  step="0.01"
+                  required
+                  placeholder="Use negative for expenses"
+                  data-testid="input-amount"
+                />
+              </div>
+              <div>
+                <Label htmlFor="category">Category</Label>
+                <Select name="category" defaultValue="Other">
+                  <SelectTrigger data-testid="select-category">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Other">Other (Auto-categorize)</SelectItem>
+                    <SelectItem value="Groceries">Groceries</SelectItem>
+                    <SelectItem value="Food & Dining">Food & Dining</SelectItem>
+                    <SelectItem value="Transportation">Transportation</SelectItem>
+                    <SelectItem value="Shopping">Shopping</SelectItem>
+                    <SelectItem value="Entertainment">Entertainment</SelectItem>
+                    <SelectItem value="Healthcare">Healthcare</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="date">Date</Label>
+                <Input
+                  id="date"
+                  name="date"
+                  type="date"
+                  defaultValue={new Date().toISOString().split('T')[0]}
+                  required
+                  data-testid="input-date"
+                />
+              </div>
+              <div>
+                <Label htmlFor="description">Description (Optional)</Label>
+                <Input id="description" name="description" data-testid="input-description" />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="submit" disabled={createTransactionMutation.isPending} data-testid="button-submit-transaction">
+                {createTransactionMutation.isPending ? 'Adding...' : 'Add Transaction'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Upload CSV Dialog */}
+      <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
+        <DialogContent data-testid="dialog-upload-csv">
+          <DialogHeader>
+            <DialogTitle>Upload Transactions CSV</DialogTitle>
+            <DialogDescription>
+              Upload a CSV file with columns: date, amount, merchant, category, description
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv"
+              onChange={handleFileUpload}
+              disabled={uploadCSVMutation.isPending}
+              data-testid="input-csv-file"
+            />
+          </div>
+          {uploadCSVMutation.isPending && (
+            <div className="text-sm text-muted-foreground">Uploading and processing...</div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
