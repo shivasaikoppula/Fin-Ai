@@ -8,6 +8,23 @@ import express, {
 } from "express";
 
 import { registerRoutes } from "./routes";
+import express from 'express';
+import { supabase } from './supabase.js';   // relative path
+
+const app = express();
+app.use(express.json());
+
+// example: save a prediction
+app.post('/save-prediction', async (req, res) => {
+  const { model_name, storage, camera, year, predicted_price, user_id } = req.body;
+  const { data, error } = await supabase
+    .from('predictions')
+    .insert([{ model_name, storage, camera, year, predicted_price, user_id }]);
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ status: 'saved', data });
+});
+
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
