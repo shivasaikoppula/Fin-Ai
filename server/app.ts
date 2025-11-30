@@ -5,7 +5,11 @@ import express, {
   type Request,
   Response,
   NextFunction,
+
 } from "express";
+import { supabaseClient } from './supabaseClient';
+const { data, error } = await supabaseClient.from('predictions').select('*');
+
 
 import { registerRoutes } from "./routes";
 import express from 'express';
